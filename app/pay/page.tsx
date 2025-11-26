@@ -1,111 +1,168 @@
-import React from 'react';
+"use client";
+
+import React, { useState, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 type Props = {};
 
-function PersonalDetailsForm({}: Props) {
+function PersonalDetailsContent() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const psId = searchParams.get("psId");
+  const psName = searchParams.get("psName");
+  const psType = searchParams.get("psType");
+
+  const [formData, setFormData] = useState({
+    nama: "",
+    email: "",
+    voucher: "",
+    durasi: "1",
+  });
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { id, value } = e.target;
+    setFormData((prev) => ({ ...prev, [id]: value }));
+  };
+
+  const handleDurationChange = (value: string) => {
+    setFormData((prev) => ({ ...prev, durasi: value }));
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const params = new URLSearchParams({
+      ...formData,
+      psId: psId || "",
+      psName: psName || "",
+      psType: psType || "",
+    });
+    router.push(`/order-detail?${params.toString()}`);
+  };
+
   return (
-    <div className="min-h-screen bg-white flex flex-col font-sans">
+    <div className="flex min-h-screen flex-col bg-white font-sans">
       {/* Header Section */}
-      <header className="w-full bg-purple-700 py-4 px-6 shadow-md">
-        <h1 className="text-white text-xl font-bold">Funbox.idn</h1>
+      <header className="w-full bg-[#4B32CE] px-6 py-4 shadow-md">
+        <h1 className="text-xl font-bold text-white">Funbox.idn</h1>
       </header>
 
       {/* Main Content Container */}
-      <main className="flex-grow flex flex-col items-center justify-center px-4 py-8">
+      <main className="flex flex-grow flex-col items-center justify-center px-4 py-8">
         <div className="w-full max-w-2xl">
-          
           {/* Title */}
-          <h2 className="text-3xl font-bold text-center text-purple-700 mb-10">
+          <h2 className="mb-10 text-center text-3xl font-bold text-[#4B32CE]">
             Personal Details
           </h2>
 
           {/* Form */}
-          <form className="space-y-6">
-            
+          <form className="space-y-6" onSubmit={handleSubmit}>
             {/* Nama Input */}
-            <div className="flex flex-col">
-              <label htmlFor="nama" className="font-bold text-gray-700 mb-2">
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="nama" className="font-bold text-gray-700">
                 Nama
-              </label>
-              <input
+              </Label>
+              <Input
                 type="text"
                 id="nama"
+                value={formData.nama}
+                onChange={handleChange}
+                required
                 placeholder="Lorem ipsum"
-                className="border border-gray-300 rounded-md p-3 w-full focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent placeholder-gray-300"
+                className="focus-visible:ring-[#4B32CE]"
               />
             </div>
 
             {/* Email Input */}
-            <div className="flex flex-col">
-              <label htmlFor="email" className="font-bold text-gray-700 mb-2">
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="email" className="font-bold text-gray-700">
                 E-mail
-              </label>
-              <input
+              </Label>
+              <Input
                 type="email"
                 id="email"
+                value={formData.email}
+                onChange={handleChange}
+                required
                 placeholder="example@example.com"
-                className="border border-gray-300 rounded-md p-3 w-full focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent placeholder-gray-300"
+                className="focus-visible:ring-[#4B32CE]"
               />
             </div>
 
             {/* Voucher Input */}
-            <div className="flex flex-col">
-              <label htmlFor="voucher" className="font-bold text-gray-700 mb-2">
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="voucher" className="font-bold text-gray-700">
                 Voucher (if applicable)
-              </label>
-              <input
+              </Label>
+              <Input
                 type="text"
                 id="voucher"
+                value={formData.voucher}
+                onChange={handleChange}
                 placeholder="Lorem Ipsum"
-                className="border border-gray-300 rounded-md p-3 w-full focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent placeholder-gray-300"
+                className="focus-visible:ring-[#4B32CE]"
               />
             </div>
 
             {/* Durasi Dropdown */}
-            <div className="flex flex-col">
-              <label htmlFor="durasi" className="font-bold text-gray-700 mb-2">
-                Durasi
-              </label>
-              <div className="relative">
-                <select
-                  id="durasi"
-                  defaultValue=""
-                  className="appearance-none border border-gray-300 rounded-md p-3 w-full focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent text-gray-500 bg-white"
-                >
-                  <option value="" disabled>Pilih Satu</option>
-                  <option value="1">1 Bulan</option>
-                  <option value="3">3 Bulan</option>
-                  <option value="12">12 Bulan</option>
-                </select>
-                {/* Custom Chevron Icon for Select */}
-                <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-gray-500">
-                  <svg className="h-4 w-4 fill-current" viewBox="0 0 20 20">
-                    <path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" />
-                  </svg>
-                </div>
-              </div>
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="durasi" className="font-bold text-gray-700">
+                Durasi (Jam)
+              </Label>
+              <Select
+                value={formData.durasi}
+                onValueChange={handleDurationChange}
+              >
+                <SelectTrigger className="w-full focus:ring-[#4B32CE]">
+                  <SelectValue placeholder="Pilih durasi" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="1">1 Jam</SelectItem>
+                  <SelectItem value="2">2 Jam</SelectItem>
+                  <SelectItem value="3">3 Jam</SelectItem>
+                  <SelectItem value="4">4 Jam</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
 
             {/* Action Buttons */}
-            <div className="flex justify-end items-center gap-4 mt-8 pt-4">
-              <button
+            <div className="mt-8 flex items-center justify-end gap-4 pt-4">
+              <Button
                 type="button"
-                className="px-8 py-2 border border-purple-200 text-purple-600 font-semibold rounded-xl hover:bg-purple-50 transition-colors"
+                variant="outline"
+                onClick={() => router.back()}
+                className="rounded-xl border-[#4B32CE] text-[#4B32CE] hover:bg-[#4B32CE]/10 hover:text-[#4B32CE]"
               >
                 Kembali
-              </button>
-              <button
+              </Button>
+              <Button
                 type="submit"
-                className="px-6 py-2 bg-purple-600 text-white font-semibold rounded-xl shadow hover:bg-purple-700 transition-colors"
+                className="rounded-xl bg-[#4B32CE] text-white hover:bg-[#3a26a8]"
               >
                 Lanjut ke Pembayaran
-              </button>
+              </Button>
             </div>
-
           </form>
         </div>
       </main>
     </div>
+  );
+}
+
+function PersonalDetailsForm({}: Props) {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <PersonalDetailsContent />
+    </Suspense>
   );
 }
 
