@@ -19,12 +19,6 @@ const FeDwi2 = ({ location }: FeDwi2Props) => {
 
   return (
     <div className="flex min-h-screen flex-col bg-white font-sans">
-      <header className="sticky top-0 z-10 bg-[#5b4aff] px-6 py-4 shadow-md">
-        <h1 className="text-xl font-bold tracking-wide text-white">
-          Funbox.idn
-        </h1>
-      </header>
-
       <main className="mx-auto flex w-full max-w-4xl flex-1 flex-col items-center px-6 pt-10 pb-10">
         <h2 className="mb-10 text-center text-3xl font-bold text-[#4c3fcf] md:text-4xl">
           Choose your PlayStation

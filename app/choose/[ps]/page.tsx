@@ -10,7 +10,7 @@ interface PlayStation {
   nama: string;
   tipe: string;
   lokasi: string;
-  status: "AVAILABLE" | "MAINTENANCE" | "OFFLINE";
+  status: "AVAILABLE" | "MAINTENANCE" | "OFFLINE" | "IN_USE";
   macAddress?: string;
   createdAt: string;
   updatedAt: string;
@@ -38,7 +38,7 @@ export default function ChoosePSPage() {
           },
         });
 
-        if (response.data.available) {
+        if (response.data.playStations.length > 0) {
           setPlaystations(response.data.playStations);
         } else {
           setPlaystations([]);
@@ -81,12 +81,18 @@ export default function ChoosePSPage() {
     switch (status) {
       case "AVAILABLE":
         return "Available";
-      case "MAINTENANCE":
+      case "IN_USE":
         return "In Use";
+      case "MAINTENANCE":
+        return "Maintenance";
       case "OFFLINE":
         return "Offline";
       default:
-        return status;
+        // Fallback: Replace underscores with spaces and capitalize each word
+        return status
+          .replace(/_/g, " ")
+          .toLowerCase()
+          .replace(/\b\w/g, (l) => l.toUpperCase());
     }
   };
 
@@ -118,12 +124,6 @@ export default function ChoosePSPage() {
 
   return (
     <div className="flex min-h-screen flex-col bg-white font-sans">
-      <header className="sticky top-0 z-10 bg-[#5b4aff] px-6 py-4 shadow-md">
-        <h1 className="text-xl font-bold tracking-wide text-white">
-          Funbox.idn
-        </h1>
-      </header>
-
       <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col items-center px-6 pt-10 pb-10">
         <h2 className="mb-2 text-center text-3xl font-bold text-[#4c3fcf] md:text-4xl">
           Choose your PlayStation

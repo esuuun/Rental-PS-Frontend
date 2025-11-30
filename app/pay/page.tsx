@@ -12,6 +12,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import api from "../../lib/api";
+import toast, { Toaster } from "react-hot-toast";
 
 type Props = {};
 
@@ -28,6 +30,7 @@ function PersonalDetailsContent() {
     voucher: "",
     durasi: "1",
   });
+  const [loading, setLoading] = useState(false);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { id, value } = e.target;
@@ -38,23 +41,49 @@ function PersonalDetailsContent() {
     setFormData((prev) => ({ ...prev, durasi: value }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const params = new URLSearchParams({
-      ...formData,
-      psId: psId || "",
-      psName: psName || "",
-      psType: psType || "",
-    });
-    router.push(`/order-detail?${params.toString()}`);
+    setLoading(true);
+
+    try {
+      if (formData.voucher) {
+        try {
+          const response = await api.get("/promo-codes/validate", {
+            params: { code: formData.voucher },
+          });
+
+          if (!response.data.valid) {
+            toast.error("Kode voucher tidak valid atau sudah kadaluarsa.");
+            setLoading(false);
+            return;
+          }
+        } catch (error) {
+          console.error("Error validating voucher:", error);
+          toast.error(
+            "Gagal memvalidasi voucher. Silakan coba lagi atau kosongkan jika tidak ingin menggunakan voucher.",
+          );
+          setLoading(false);
+          return;
+        }
+      }
+
+      const params = new URLSearchParams({
+        ...formData,
+        psId: psId || "",
+        psName: psName || "",
+        psType: psType || "",
+      });
+      router.push(`/order-detail?${params.toString()}`);
+    } catch (error) {
+      console.error("Error submitting form:", error);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
     <div className="flex min-h-screen flex-col bg-white font-sans">
-      {/* Header Section */}
-      <header className="w-full bg-[#4B32CE] px-6 py-4 shadow-md">
-        <h1 className="text-xl font-bold text-white">Funbox.idn</h1>
-      </header>
+      <Toaster position="top-center" reverseOrder={false} />
 
       {/* Main Content Container */}
       <main className="flex flex-grow flex-col items-center justify-center px-4 py-8">
@@ -125,7 +154,7 @@ function PersonalDetailsContent() {
                 <SelectTrigger className="w-full focus:ring-[#4B32CE]">
                   <SelectValue placeholder="Pilih durasi" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="bg-white">
                   <SelectItem value="1">1 Jam</SelectItem>
                   <SelectItem value="2">2 Jam</SelectItem>
                   <SelectItem value="3">3 Jam</SelectItem>
@@ -146,9 +175,10 @@ function PersonalDetailsContent() {
               </Button>
               <Button
                 type="submit"
-                className="rounded-xl bg-[#4B32CE] text-white hover:bg-[#3a26a8]"
+                disabled={loading}
+                className="rounded-xl bg-[#4B32CE] text-white hover:bg-[#3a26a8] disabled:opacity-50"
               >
-                Lanjut ke Pembayaran
+                {loading ? "Memproses..." : "Lanjut ke Pembayaran"}
               </Button>
             </div>
           </form>

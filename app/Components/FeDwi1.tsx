@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -15,9 +15,35 @@ interface FeDwi1Props {
   onLocationSelect: (location: string) => void;
 }
 
+const banners = [
+  {
+    id: 1,
+    bg: "bg-[#1a1464]",
+    text: "Funbox.idn",
+  },
+  {
+    id: 2,
+    bg: "bg-[#4B32CE]",
+    text: "PlayStation 5",
+  },
+  {
+    id: 3,
+    bg: "bg-[#8271db]",
+    text: "Promo Spesial",
+  },
+];
+
 const FeDwi1 = ({ onLocationSelect }: FeDwi1Props) => {
   const [selectedPlace, setSelectedPlace] = useState("");
+  const [currentSlide, setCurrentSlide] = useState(0);
   const router = useRouter();
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentSlide((prev) => (prev + 1) % banners.length);
+    }, 3000);
+    return () => clearInterval(timer);
+  }, []);
 
   const handleLocationChange = (value: string) => {
     setSelectedPlace(value);
@@ -32,39 +58,45 @@ const FeDwi1 = ({ onLocationSelect }: FeDwi1Props) => {
 
   return (
     <div className="flex min-h-screen flex-col bg-white font-sans">
-      {/* Header */}
-      <header className="bg-[#4B32CE] px-6 py-4 shadow-md">
-        <h1 className="text-xl font-bold tracking-wide text-white">
-          Funbox.idn
-        </h1>
-      </header>
-
       <main className="mx-auto flex w-full max-w-lg flex-1 flex-col items-center px-6 pt-8 pb-10">
-        {/* Banner Card PLACEHOLDER*/}
+        {/* Banner Carousel */}
+        <div className="group relative mb-6 h-48 w-full overflow-hidden rounded-2xl shadow-lg">
+          {banners.map((banner, index) => (
+            <div
+              key={banner.id}
+              className={`absolute inset-0 h-full w-full transition-opacity duration-500 ${
+                index === currentSlide ? "opacity-100" : "opacity-0"
+              } ${banner.bg}`}
+            >
+              <div className="pointer-events-none absolute inset-0 flex scale-125 -rotate-12 transform flex-col items-center justify-center opacity-90 select-none">
+                <div className="text-6xl leading-tight font-bold whitespace-nowrap text-white/90">
+                  {banner.text} Fun
+                </div>
+                <div className="ml-24 text-6xl leading-tight font-bold whitespace-nowrap text-white/90">
+                  {banner.text}
+                </div>
+                <div className="text-6xl leading-tight font-bold whitespace-nowrap text-white/90">
+                  {banner.text} Fun
+                </div>
+              </div>
 
-        <div className="group relative mb-6 h-48 w-full overflow-hidden rounded-2xl bg-[#1a1464] shadow-lg">
-          <div className="pointer-events-none absolute inset-0 flex scale-125 -rotate-12 transform flex-col items-center justify-center opacity-90 select-none">
-            <div className="text-6xl leading-tight font-bold whitespace-nowrap text-white/90">
-              Funbox.idn Fun
+              <div className="absolute inset-0 bg-gradient-to-tr from-indigo-900/30 to-transparent"></div>
             </div>
-            <div className="ml-24 text-6xl leading-tight font-bold whitespace-nowrap text-white/90">
-              Funbox.idn
-            </div>
-            <div className="text-6xl leading-tight font-bold whitespace-nowrap text-white/90">
-              Funbox.idn Fun
-            </div>
-          </div>
-
-          <div className="absolute inset-0 bg-gradient-to-tr from-indigo-900/30 to-transparent"></div>
+          ))}
         </div>
 
-        {/* Pagination Dots PLACEHOLDER*/}
+        {/* Pagination Dots */}
         <div className="mb-10 flex gap-2">
-          <div className="h-3 w-3 rounded-full bg-[#4B32CE]"></div>
-          <div className="h-3 w-3 rounded-full bg-gray-300"></div>
-          <div className="h-3 w-3 rounded-full bg-gray-300"></div>
-          <div className="h-3 w-3 rounded-full bg-gray-300"></div>
-          <div className="h-3 w-3 rounded-full bg-gray-300"></div>
+          {banners.map((_, index) => (
+            <button
+              key={index}
+              onClick={() => setCurrentSlide(index)}
+              className={`h-3 w-3 rounded-full transition-colors ${
+                index === currentSlide ? "bg-[#4B32CE]" : "bg-gray-300"
+              }`}
+              aria-label={`Go to slide ${index + 1}`}
+            />
+          ))}
         </div>
 
         {/* Welcome Message */}
@@ -80,13 +112,12 @@ const FeDwi1 = ({ onLocationSelect }: FeDwi1Props) => {
         {/* Dropdown Input */}
         <div className="relative mb-12 w-full">
           <Select value={selectedPlace} onValueChange={handleLocationChange}>
-            <SelectTrigger className="h-14 w-full rounded-lg border-indigo-200 text-base shadow-sm focus:ring-[#4B32CE]">
+            <SelectTrigger className="h-14 w-full rounded-lg border-indigo-200 bg-white text-base shadow-sm focus:ring-[#4B32CE]">
               <SelectValue placeholder="Pilih tempat" />
             </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="jakarta">Jakarta</SelectItem>
-              <SelectItem value="bandung">Bandung</SelectItem>
-              <SelectItem value="surabaya">Surabaya</SelectItem>
+            <SelectContent className="bg-white">
+              <SelectItem value="Jakarta">Jakarta</SelectItem>
+              <SelectItem value="Kutek">Kutek</SelectItem>
             </SelectContent>
           </Select>
         </div>

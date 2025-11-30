@@ -1,19 +1,15 @@
 "use client";
 
-import { useSearchParams } from "next/navigation";
-import Script from "next/script";
+import { useSearchParams, useRouter } from "next/navigation";
 import { useState, useEffect, Suspense } from "react";
 import api from "../../lib/api";
-
-declare global {
-  interface Window {
-    snap: any;
-  }
-}
+import toast, { Toaster } from "react-hot-toast";
+import { useSnap } from "../../hooks/useSnap";
 
 function OrderDetailContent() {
+  const router = useRouter();
   const searchParams = useSearchParams();
-  const name = searchParams.get("name") || "";
+  const name = searchParams.get("nama") || "";
   const email = searchParams.get("email") || "";
   const voucher = searchParams.get("voucher") || "";
   const duration = parseInt(searchParams.get("durasi") || "1");
@@ -26,92 +22,190 @@ function OrderDetailContent() {
   // PS5: 30k/slot -> 60k/hour
   const pricePerHour = psType.toUpperCase().includes("PS5") ? 60000 : 50000;
   const subtotal = pricePerHour * duration;
-  const discount = 0; // Implement voucher logic if needed
+
+  const [discount, setDiscount] = useState(0);
+  const [voucherStatus, setVoucherStatus] = useState<couponStatus>(
+    voucher ? "unused" : "unused",
+  );
+
+  useEffect(() => {
+    if (!voucher) {
+      setVoucherStatus("unused");
+      setDiscount(0);
+      return;
+    }
+
+    const validateVoucher = async () => {
+      try {
+        // Endpoint assumption: GET /api/promo-codes/validate?code=...
+        const response = await api.get("/promo-codes/validate", {
+          params: { code: voucher },
+        });
+
+        if (response.data.valid && response.data.promoCode) {
+          const { tipeDiskon, nilaiDiskon } = response.data.promoCode;
+          let disc = 0;
+          if (tipeDiskon === "PERCENTAGE") {
+            disc = (subtotal * Number(nilaiDiskon)) / 100;
+          } else {
+            disc = Number(nilaiDiskon);
+          }
+          setDiscount(disc);
+          setVoucherStatus("valid");
+        } else {
+          setDiscount(0);
+          setVoucherStatus("invalid");
+        }
+      } catch (error) {
+        console.error("Error validating voucher:", error);
+        setDiscount(0);
+        setVoucherStatus("invalid");
+      }
+    };
+
+    validateVoucher();
+  }, [voucher, subtotal]);
+
   const total = subtotal - discount;
 
   const [loading, setLoading] = useState(false);
+  const [existingBookingId, setExistingBookingId] = useState<number | null>(
+    null,
+  );
+  const { snapPay } = useSnap();
 
   const handlePayment = async () => {
     if (!psId) {
-      alert("Invalid order details");
+      toast.error("Invalid order details");
       return;
     }
 
     setLoading(true);
     try {
-      // 1. Create Booking
-      // waktuMulai must be in the future. Adding 1 minute buffer.
-      const startTime = new Date(Date.now() + 60 * 1000).toISOString();
+      let bookingId = existingBookingId;
 
-      const bookingResponse = await api.post("/bookings", {
-        namaPanggilan: name,
-        email: email,
-        playstationId: parseInt(psId),
-        waktuMulai: startTime,
-        jumlahSlot: duration * 2, // 30 min slots
-        kodePromo: voucher || undefined,
-      });
+      // 1. Create Booking (only if not already created)
+      if (!bookingId) {
+        // waktuMulai must be in the future. Adding 1 minute buffer.
+        const startTime = new Date(Date.now() + 60 * 1000).toISOString();
 
-      const booking = bookingResponse.data.booking;
-      const bookingId = booking.id;
+        const bookingResponse = await api.post("/bookings", {
+          namaPanggilan: name,
+          email: email,
+          playstationId: parseInt(psId),
+          waktuMulai: startTime,
+          jumlahSlot: duration * 2, // 30 min slots
+          kodePromo: voucher || undefined,
+        });
+
+        const booking = bookingResponse.data.booking;
+        bookingId = booking.id;
+        setExistingBookingId(bookingId);
+      }
 
       // 2. Initiate Payment
-      const paymentResponse = await api.post("/payments/create", {
-        bookingId: bookingId,
-      });
+      let snapToken;
+      let midtransOrderId;
 
-      const snapToken = paymentResponse.data.payment.snapToken;
+      try {
+        const paymentResponse = await api.post("/payments/create", {
+          bookingId: bookingId,
+        });
+        snapToken = paymentResponse.data.payment.snapToken;
+        midtransOrderId = paymentResponse.data.payment.midtransOrderId;
+      } catch (error: any) {
+        if (
+          error.response &&
+          error.response.status === 409 &&
+          error.response.data.payment
+        ) {
+          if (error.response.data.payment.status === "FAILED") {
+            toast.error("Pembayaran kadaluarsa. Silakan pesan ulang.");
+            router.push("/");
+            return;
+          }
+
+          // Reuse existing payment
+          console.log("Reusing existing payment:", error.response.data.payment);
+          snapToken = error.response.data.payment.snapToken;
+          midtransOrderId = error.response.data.payment.midtransOrderId;
+
+          if (!snapToken) {
+            throw new Error("Existing payment found but no token available.");
+          }
+        } else {
+          throw error;
+        }
+      }
 
       // 3. Open Snap
-      if (window.snap) {
-        window.snap.pay(snapToken, {
-          onSuccess: function (result: any) {
-            alert("Payment success!");
-            console.log(result);
-            // Redirect to success page or update UI
-            // router.push("/payment-success"); // You might want to add this
-          },
-          onPending: function (result: any) {
-            alert("Waiting for your payment!");
-            console.log(result);
-          },
-          onError: function (result: any) {
-            alert("Payment failed!");
-            console.log(result);
-          },
-          onClose: function () {
-            alert("You closed the popup without finishing the payment");
-          },
-        });
-      } else {
-        alert("Payment gateway not loaded properly. Please refresh.");
-      }
+      snapPay(snapToken, {
+        onSuccess: async (result) => {
+          toast.success("Payment success! Verifying...");
+          console.log("Snap Success:", result);
+
+          try {
+            // Immediately check status with backend to update DB
+            await api.get(`/payments/check-status?orderId=${midtransOrderId}`);
+            toast.success("Payment verified!");
+          } catch (error) {
+            console.error("Error verifying payment status:", error);
+          }
+
+          router.push("/payment-success");
+        },
+        onPending: async (result) => {
+          toast("Waiting for your payment!", { icon: "⏳" });
+          console.log("Snap Pending:", result);
+
+          try {
+            await api.get(`/payments/check-status?orderId=${midtransOrderId}`);
+          } catch (error) {
+            console.error("Error checking payment status:", error);
+          }
+
+          // Do not redirect to success on pending.
+          // The user might have closed the popup after selecting a method (e.g. VA).
+          // We let them stay here or they can check their email/transactions later.
+        },
+        onError: (result) => {
+          toast.error("Payment failed!");
+          console.log("Snap Error:", result);
+          router.push("/payment-failed");
+        },
+        onClose: () => {
+          toast("You closed the popup without finishing the payment", {
+            icon: "⚠️",
+          });
+        },
+      });
     } catch (error: any) {
       console.error("Payment error:", error);
+
+      if (
+        error.response?.status === 400 &&
+        error.response?.data?.currentPaymentStatus === "FAILED"
+      ) {
+        toast.error("Pembayaran kadaluarsa. Silakan pesan ulang.");
+        router.push("/");
+        return;
+      }
+
       const errorMessage =
         error.response?.data?.message ||
         error.response?.data?.error ||
         "Failed to process payment.";
-      alert(errorMessage);
+      toast.error(errorMessage);
     } finally {
       setLoading(false);
     }
   };
 
-  let status: couponStatus = voucher ? "valid" : "unused"; // Simplified logic
+  // let status: couponStatus = voucher ? "valid" : "unused"; // Simplified logic
 
   return (
     <div className="flex flex-col items-center gap-10">
-      <Script
-        src="https://app.sandbox.midtrans.com/snap/snap.js"
-        data-client-key={process.env.NEXT_PUBLIC_MIDTRANS_CLIENT_KEY || ""}
-      />
-
-      <nav className="bg-blue-purple flex w-full items-center px-10 py-3">
-        <a className="font-inter text-2xl font-bold text-white" href="#">
-          Funbox.idn
-        </a>
-      </nav>
+      <Toaster position="top-center" reverseOrder={false} />
 
       <h1 className="font-inter text-blue-purple text-3xl font-bold sm:text-4xl md:text-5xl">
         Order Summary
@@ -173,7 +267,7 @@ function OrderDetailContent() {
               <p>Kode Voucher</p>
             </div>
 
-            <Coupon status={status} />
+            <Coupon status={voucherStatus} />
 
             <div className="mb-2 flex w-full justify-between">
               <p>Subtotal</p>
