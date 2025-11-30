@@ -41,16 +41,22 @@ const FeDwi2 = ({ location }: FeDwi2Props) => {
 
           {/* PS5 Card */}
           <div
-            onClick={() => handleSelectType("PS5")}
-            className="group relative cursor-pointer overflow-hidden rounded-3xl shadow-xl transition-transform duration-300 hover:scale-105"
+            className="group relative cursor-not-allowed overflow-hidden rounded-3xl shadow-xl"
           >
             <Image
               src="/frame ps5.png"
               alt="PS5"
               width={320}
               height={320}
-              className="h-auto w-full object-cover"
+              className="h-auto w-full object-cover blur-sm"
             />
+            <div className="absolute inset-0 flex items-center justify-center bg-white/30">
+              <h2 className="text-center text-3xl font-bold text-[#000080] md:text-4xl">
+                Coming
+                <br />
+                Soon!
+              </h2>
+            </div>
           </div>
         </div>
       </main>

@@ -4,6 +4,7 @@ import React, { useEffect, useState } from "react";
 import { useRouter, useSearchParams, useParams } from "next/navigation";
 import Image from "next/image";
 import api from "../../../lib/api";
+import ErrorModal from "../../Components/ErrorModal";
 
 interface PlayStation {
   id: number;
@@ -25,6 +26,7 @@ export default function ChoosePSPage() {
 
   const [playstations, setPlaystations] = useState<PlayStation[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isErrorModalOpen, setIsErrorModalOpen] = useState(false);
 
   useEffect(() => {
     const fetchPlayStations = async () => {
@@ -56,7 +58,10 @@ export default function ChoosePSPage() {
   }, [location, psType]);
 
   const handleSelectPS = (ps: PlayStation) => {
-    if (ps.status !== "AVAILABLE") return;
+    if (ps.status !== "AVAILABLE") {
+      setIsErrorModalOpen(true);
+      return;
+    }
 
     router.push(
       `/pay?psId=${ps.id}&psName=${encodeURIComponent(ps.nama)}&psType=${encodeURIComponent(ps.tipe)}`,
@@ -183,6 +188,7 @@ export default function ChoosePSPage() {
           </div>
         )}
       </main>
+      <ErrorModal isOpen={isErrorModalOpen} onClose={() => setIsErrorModalOpen(false)} />
     </div>
   );
 }
