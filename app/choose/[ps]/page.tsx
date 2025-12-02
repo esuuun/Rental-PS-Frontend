@@ -1,8 +1,8 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
-import { useRouter, useSearchParams, useParams } from "next/navigation";
 import Image from "next/image";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
+import { useEffect, useState } from "react";
 import api from "../../../lib/api";
 import ErrorModal from "../../Components/ErrorModal";
 
@@ -188,7 +188,10 @@ export default function ChoosePSPage() {
           </div>
         )}
       </main>
-      <ErrorModal isOpen={isErrorModalOpen} onClose={() => setIsErrorModalOpen(false)} />
+      <ErrorModal
+        isOpen={isErrorModalOpen}
+        onClose={() => setIsErrorModalOpen(false)}
+      />
     </div>
   );
 }
