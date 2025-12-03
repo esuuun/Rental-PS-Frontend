@@ -4,7 +4,7 @@ import { useSearchParams, useRouter } from "next/navigation";
 import { useState, useEffect, Suspense } from "react";
 import api from "../../lib/api";
 import toast, { Toaster } from "react-hot-toast";
-import { useSnap } from "../../hooks/useSnap";
+// import { useSnap } from "../../hooks/useSnap"; // BYPASS MIDTRANS - commented out
 
 function OrderDetailContent() {
   const router = useRouter();
@@ -12,7 +12,7 @@ function OrderDetailContent() {
   const name = searchParams.get("nama") || "";
   const email = searchParams.get("email") || "";
   const voucher = searchParams.get("voucher") || "";
-  const duration = parseInt(searchParams.get("durasi") || "1");
+  const duration = parseFloat(searchParams.get("durasi") || "1");
   const psId = searchParams.get("psId");
   const psName = searchParams.get("psName");
   const psType = searchParams.get("psType") || "PS4";
@@ -21,7 +21,8 @@ function OrderDetailContent() {
   // PS4: 25k/slot -> 50k/hour
   // PS5: 30k/slot -> 60k/hour
   const pricePerHour = psType.toUpperCase().includes("PS5") ? 60000 : 50000;
-  const subtotal = pricePerHour * duration;
+  // For testing: 1 minute (0.017 hours) uses minimum 1 slot pricing
+  const subtotal = duration < 0.5 ? (pricePerHour / 2) : pricePerHour * duration;
 
   const [discount, setDiscount] = useState(0);
   const [voucherStatus, setVoucherStatus] = useState<couponStatus>(
@@ -72,7 +73,7 @@ function OrderDetailContent() {
   const [existingBookingId, setExistingBookingId] = useState<number | null>(
     null,
   );
-  const { snapPay } = useSnap();
+  // const { snapPay } = useSnap(); // BYPASS MIDTRANS - commented out
 
   const handlePayment = async () => {
     if (!psId) {
@@ -89,96 +90,121 @@ function OrderDetailContent() {
         // waktuMulai must be in the future. Adding 1 minute buffer.
         const startTime = new Date(Date.now() + 60 * 1000).toISOString();
 
+        // Convert duration to slots (30 min per slot)
+        // For testing: 1 minute (0.017 hours) = 1 slot minimum
+        const jumlahSlot = duration < 0.5 ? 1 : Math.ceil(duration * 2);
+
         const bookingResponse = await api.post("/bookings", {
           namaPanggilan: name,
           email: email,
           playstationId: parseInt(psId),
           waktuMulai: startTime,
-          jumlahSlot: duration * 2, // 30 min slots
+          jumlahSlot: jumlahSlot, // 30 min slots, minimum 1 slot for testing
           kodePromo: voucher || undefined,
         });
 
         const booking = bookingResponse.data.booking;
         bookingId = booking.id;
         setExistingBookingId(bookingId);
-      }
-
-      // 2. Initiate Payment
-      let snapToken;
-      let midtransOrderId;
-
-      try {
-        const paymentResponse = await api.post("/payments/create", {
-          bookingId: bookingId,
-        });
-        snapToken = paymentResponse.data.payment.snapToken;
-        midtransOrderId = paymentResponse.data.payment.midtransOrderId;
-      } catch (error: any) {
-        if (
-          error.response &&
-          error.response.status === 409 &&
-          error.response.data.payment
-        ) {
-          if (error.response.data.payment.status === "FAILED") {
-            toast.error("Pembayaran kadaluarsa. Silakan pesan ulang.");
-            router.push("/");
-            return;
-          }
-
-          // Reuse existing payment
-          console.log("Reusing existing payment:", error.response.data.payment);
-          snapToken = error.response.data.payment.snapToken;
-          midtransOrderId = error.response.data.payment.midtransOrderId;
-
-          if (!snapToken) {
-            throw new Error("Existing payment found but no token available.");
-          }
-        } else {
-          throw error;
+        // Save to localStorage for payment-success page
+        if (bookingId) {
+          localStorage.setItem('lastBookingId', bookingId.toString());
+          // Save actual duration in hours for testing (1 minute = 0.017 hours)
+          localStorage.setItem('lastBookingDuration', duration.toString());
         }
       }
 
-      // 3. Open Snap
-      snapPay(snapToken, {
-        onSuccess: async (result) => {
-          toast.success("Payment success! Verifying...");
-          console.log("Snap Success:", result);
+      // 2. Initiate Payment - BYPASS MIDTRANS FOR NOW
+      // let snapToken;
+      // let midtransOrderId;
 
-          try {
-            // Immediately check status with backend to update DB
-            await api.get(`/payments/check-status?orderId=${midtransOrderId}`);
-            toast.success("Payment verified!");
-          } catch (error) {
-            console.error("Error verifying payment status:", error);
-          }
+      // try {
+      //   const paymentResponse = await api.post("/payments/create", {
+      //     bookingId: bookingId,
+      //   });
+      //   snapToken = paymentResponse.data.payment.snapToken;
+      //   midtransOrderId = paymentResponse.data.payment.midtransOrderId;
+      // } catch (error: any) {
+      //   if (
+      //     error.response &&
+      //     error.response.status === 409 &&
+      //     error.response.data.payment
+      //   ) {
+      //     if (error.response.data.payment.status === "FAILED") {
+      //       toast.error("Pembayaran kadaluarsa. Silakan pesan ulang.");
+      //       router.push("/");
+      //       return;
+      //     }
 
-          router.push("/payment-success");
-        },
-        onPending: async (result) => {
-          toast("Waiting for your payment!", { icon: "⏳" });
-          console.log("Snap Pending:", result);
+      //     // Reuse existing payment
+      //     console.log("Reusing existing payment:", error.response.data.payment);
+      //     snapToken = error.response.data.payment.snapToken;
+      //     midtransOrderId = error.response.data.payment.midtransOrderId;
 
-          try {
-            await api.get(`/payments/check-status?orderId=${midtransOrderId}`);
-          } catch (error) {
-            console.error("Error checking payment status:", error);
-          }
+      //     if (!snapToken) {
+      //       throw new Error("Existing payment found but no token available.");
+      //     }
+      //   } else {
+      //     throw error;
+      //   }
+      // }
 
-          // Do not redirect to success on pending.
-          // The user might have closed the popup after selecting a method (e.g. VA).
-          // We let them stay here or they can check their email/transactions later.
-        },
-        onError: (result) => {
-          toast.error("Payment failed!");
-          console.log("Snap Error:", result);
-          router.push("/payment-failed");
-        },
-        onClose: () => {
-          toast("You closed the popup without finishing the payment", {
-            icon: "⚠️",
-          });
-        },
-      });
+      // 3. Open Snap - BYPASS MIDTRANS
+      // snapPay(snapToken, {
+      //   onSuccess: async (result) => {
+      //     toast.success("Payment success! Verifying...");
+      //     console.log("Snap Success:", result);
+
+      //     try {
+      //       // Immediately check status with backend to update DB
+      //       await api.get(`/payments/check-status?orderId=${midtransOrderId}`);
+      //       toast.success("Payment verified!");
+      //     } catch (error) {
+      //       console.error("Error verifying payment status:", error);
+      //     }
+
+      //     // Save bookingId to localStorage before redirect
+      //     if (bookingId) {
+      //       localStorage.setItem('lastBookingId', bookingId.toString());
+      //       router.push(`/payment-success?bookingId=${bookingId}`);
+      //     } else {
+      //       router.push('/payment-success');
+      //     }
+      //   },
+      //   onPending: async (result) => {
+      //     toast("Waiting for your payment!", { icon: "⏳" });
+      //     console.log("Snap Pending:", result);
+
+      //     try {
+      //       await api.get(`/payments/check-status?orderId=${midtransOrderId}`);
+      //     } catch (error) {
+      //       console.error("Error checking payment status:", error);
+      //     }
+
+      //     // Do not redirect to success on pending.
+      //     // The user might have closed the popup after selecting a method (e.g. VA).
+      //     // We let them stay here or they can check their email/transactions later.
+      //   },
+      //   onError: (result) => {
+      //     toast.error("Payment failed!");
+      //     console.log("Snap Error:", result);
+      //     router.push("/payment-failed");
+      //   },
+      //   onClose: () => {
+      //     toast("You closed the popup without finishing the payment", {
+      //       icon: "⚠️",
+      //     });
+      //   },
+      // });
+
+      // BYPASS: Direct redirect to success page
+      toast.success("Payment processed!");
+      if (bookingId) {
+        localStorage.setItem('lastBookingId', bookingId.toString());
+        router.push(`/payment-success?bookingId=${bookingId}`);
+      } else {
+        router.push('/payment-success');
+      }
     } catch (error: any) {
       console.error("Payment error:", error);
 
@@ -231,7 +257,7 @@ function OrderDetailContent() {
 
             <label className="font-inter font-semibold">Durasi</label>
             <div className="rounded-md border border-[#D0D5DD] p-2 text-gray-700">
-              {duration} Jam
+              {duration < 0.5 ? "1 Menit (Testing)" : `${duration} Jam`}
             </div>
 
             <label className="font-inter font-semibold">PlayStation</label>
@@ -259,7 +285,7 @@ function OrderDetailContent() {
             </div>
 
             <div className="mb-5 flex w-full justify-between">
-              <p>Rental PS ({duration} Jam)</p>
+              <p>Rental PS ({duration < 0.5 ? "1 Menit (Testing)" : `${duration} Jam`})</p>
               <p>1x</p>
             </div>
 
