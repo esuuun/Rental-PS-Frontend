@@ -155,6 +155,7 @@ function PersonalDetailsContent() {
                   <SelectValue placeholder="Pilih durasi" />
                 </SelectTrigger>
                 <SelectContent className="bg-white">
+                  <SelectItem value="0.017">1 Menit (Testing)</SelectItem>
                   <SelectItem value="1">1 Jam</SelectItem>
                   <SelectItem value="2">2 Jam</SelectItem>
                   <SelectItem value="3">3 Jam</SelectItem>
