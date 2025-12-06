@@ -4,7 +4,7 @@ import { useSearchParams, useRouter } from "next/navigation";
 import { useState, useEffect, Suspense } from "react";
 import api from "../../lib/api";
 import toast, { Toaster } from "react-hot-toast";
-// import { useSnap } from "../../hooks/useSnap"; // BYPASS MIDTRANS - commented out
+import { useSnap } from "../../hooks/useSnap";
 
 function OrderDetailContent() {
   const router = useRouter();
@@ -73,7 +73,7 @@ function OrderDetailContent() {
   const [existingBookingId, setExistingBookingId] = useState<number | null>(
     null,
   );
-  // const { snapPay } = useSnap(); // BYPASS MIDTRANS - commented out
+  const { snapPay } = useSnap();
 
   const handlePayment = async () => {
     if (!psId) {
@@ -114,97 +114,88 @@ function OrderDetailContent() {
         }
       }
 
-      // 2. Initiate Payment - BYPASS MIDTRANS FOR NOW
-      // let snapToken;
-      // let midtransOrderId;
+      // 2. Initiate Payment
+      let snapToken;
+      let midtransOrderId;
 
-      // try {
-      //   const paymentResponse = await api.post("/payments/create", {
-      //     bookingId: bookingId,
-      //   });
-      //   snapToken = paymentResponse.data.payment.snapToken;
-      //   midtransOrderId = paymentResponse.data.payment.midtransOrderId;
-      // } catch (error: any) {
-      //   if (
-      //     error.response &&
-      //     error.response.status === 409 &&
-      //     error.response.data.payment
-      //   ) {
-      //     if (error.response.data.payment.status === "FAILED") {
-      //       toast.error("Pembayaran kadaluarsa. Silakan pesan ulang.");
-      //       router.push("/");
-      //       return;
-      //     }
+      try {
+        const paymentResponse = await api.post("/payments/create", {
+          bookingId: bookingId,
+        });
+        snapToken = paymentResponse.data.payment.snapToken;
+        midtransOrderId = paymentResponse.data.payment.midtransOrderId;
+      } catch (error: any) {
+        if (
+          error.response &&
+          error.response.status === 409 &&
+          error.response.data.payment
+        ) {
+          if (error.response.data.payment.status === "FAILED") {
+            toast.error("Pembayaran kadaluarsa. Silakan pesan ulang.");
+            router.push("/");
+            return;
+          }
 
-      //     // Reuse existing payment
-      //     console.log("Reusing existing payment:", error.response.data.payment);
-      //     snapToken = error.response.data.payment.snapToken;
-      //     midtransOrderId = error.response.data.payment.midtransOrderId;
+          // Reuse existing payment
+          console.log("Reusing existing payment:", error.response.data.payment);
+          snapToken = error.response.data.payment.snapToken;
+          midtransOrderId = error.response.data.payment.midtransOrderId;
 
-      //     if (!snapToken) {
-      //       throw new Error("Existing payment found but no token available.");
-      //     }
-      //   } else {
-      //     throw error;
-      //   }
-      // }
-
-      // 3. Open Snap - BYPASS MIDTRANS
-      // snapPay(snapToken, {
-      //   onSuccess: async (result) => {
-      //     toast.success("Payment success! Verifying...");
-      //     console.log("Snap Success:", result);
-
-      //     try {
-      //       // Immediately check status with backend to update DB
-      //       await api.get(`/payments/check-status?orderId=${midtransOrderId}`);
-      //       toast.success("Payment verified!");
-      //     } catch (error) {
-      //       console.error("Error verifying payment status:", error);
-      //     }
-
-      //     // Save bookingId to localStorage before redirect
-      //     if (bookingId) {
-      //       localStorage.setItem('lastBookingId', bookingId.toString());
-      //       router.push(`/payment-success?bookingId=${bookingId}`);
-      //     } else {
-      //       router.push('/payment-success');
-      //     }
-      //   },
-      //   onPending: async (result) => {
-      //     toast("Waiting for your payment!", { icon: "⏳" });
-      //     console.log("Snap Pending:", result);
-
-      //     try {
-      //       await api.get(`/payments/check-status?orderId=${midtransOrderId}`);
-      //     } catch (error) {
-      //       console.error("Error checking payment status:", error);
-      //     }
-
-      //     // Do not redirect to success on pending.
-      //     // The user might have closed the popup after selecting a method (e.g. VA).
-      //     // We let them stay here or they can check their email/transactions later.
-      //   },
-      //   onError: (result) => {
-      //     toast.error("Payment failed!");
-      //     console.log("Snap Error:", result);
-      //     router.push("/payment-failed");
-      //   },
-      //   onClose: () => {
-      //     toast("You closed the popup without finishing the payment", {
-      //       icon: "⚠️",
-      //     });
-      //   },
-      // });
-
-      // BYPASS: Direct redirect to success page
-      toast.success("Payment processed!");
-      if (bookingId) {
-        localStorage.setItem('lastBookingId', bookingId.toString());
-        router.push(`/payment-success?bookingId=${bookingId}`);
-      } else {
-        router.push('/payment-success');
+          if (!snapToken) {
+            throw new Error("Existing payment found but no token available.");
+          }
+        } else {
+          throw error;
+        }
       }
+
+      // 3. Open Snap
+      snapPay(snapToken, {
+        onSuccess: async (result) => {
+          toast.success("Payment success! Verifying...");
+          console.log("Snap Success:", result);
+
+          try {
+            // Immediately check status with backend to update DB
+            await api.get(`/payments/check-status?orderId=${midtransOrderId}`);
+            toast.success("Payment verified!");
+          } catch (error) {
+            console.error("Error verifying payment status:", error);
+          }
+
+          // Save bookingId to localStorage before redirect
+          if (bookingId) {
+            localStorage.setItem('lastBookingId', bookingId.toString());
+            router.push(`/payment-success?bookingId=${bookingId}`);
+          } else {
+            router.push('/payment-success');
+          }
+        },
+        onPending: async (result) => {
+          toast("Waiting for your payment!", { icon: "⏳" });
+          console.log("Snap Pending:", result);
+
+          try {
+            await api.get(`/payments/check-status?orderId=${midtransOrderId}`);
+          } catch (error) {
+            console.error("Error checking payment status:", error);
+          }
+
+          // Do not redirect to success on pending.
+          // The user might have closed the popup after selecting a method (e.g. VA).
+          // We let them stay here or they can check their email/transactions later.
+        },
+        onError: (result) => {
+          toast.error("Payment failed!");
+          console.log("Snap Error:", result);
+          router.push("/payment-failed");
+        },
+        onClose: () => {
+          toast("You closed the popup without finishing the payment", {
+            icon: "⚠️",
+          });
+        },
+      });
     } catch (error: any) {
       console.error("Payment error:", error);
 
