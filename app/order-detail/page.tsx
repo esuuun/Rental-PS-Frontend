@@ -12,7 +12,7 @@ function OrderDetailContent() {
   const name = searchParams.get("nama") || "";
   const email = searchParams.get("email") || "";
   const voucher = searchParams.get("voucher") || "";
-  const duration = parseInt(searchParams.get("durasi") || "1");
+  const duration = parseFloat(searchParams.get("durasi") || "1");
   const psId = searchParams.get("psId");
   const psName = searchParams.get("psName");
   const psType = searchParams.get("psType") || "PS4";
@@ -21,7 +21,8 @@ function OrderDetailContent() {
   // PS4: 25k/slot -> 50k/hour
   // PS5: 30k/slot -> 60k/hour
   const pricePerHour = psType.toUpperCase().includes("PS5") ? 60000 : 50000;
-  const subtotal = pricePerHour * duration;
+  // For testing: 1 minute (0.017 hours) uses minimum 1 slot pricing
+  const subtotal = duration < 0.5 ? (pricePerHour / 2) : pricePerHour * duration;
 
   const [discount, setDiscount] = useState(0);
   const [voucherStatus, setVoucherStatus] = useState<couponStatus>(
@@ -89,18 +90,28 @@ function OrderDetailContent() {
         // waktuMulai must be in the future. Adding 1 minute buffer.
         const startTime = new Date(Date.now() + 60 * 1000).toISOString();
 
+        // Convert duration to slots (30 min per slot)
+        // For testing: 1 minute (0.017 hours) = 1 slot minimum
+        const jumlahSlot = duration < 0.5 ? 1 : Math.ceil(duration * 2);
+
         const bookingResponse = await api.post("/bookings", {
           namaPanggilan: name,
           email: email,
           playstationId: parseInt(psId),
           waktuMulai: startTime,
-          jumlahSlot: duration * 2, // 30 min slots
+          jumlahSlot: jumlahSlot, // 30 min slots, minimum 1 slot for testing
           kodePromo: voucher || undefined,
         });
 
         const booking = bookingResponse.data.booking;
         bookingId = booking.id;
         setExistingBookingId(bookingId);
+        // Save to localStorage for payment-success page
+        if (bookingId) {
+          localStorage.setItem('lastBookingId', bookingId.toString());
+          // Save actual duration in hours for testing (1 minute = 0.017 hours)
+          localStorage.setItem('lastBookingDuration', duration.toString());
+        }
       }
 
       // 2. Initiate Payment
@@ -152,7 +163,13 @@ function OrderDetailContent() {
             console.error("Error verifying payment status:", error);
           }
 
-          router.push("/payment-success");
+          // Save bookingId to localStorage before redirect
+          if (bookingId) {
+            localStorage.setItem('lastBookingId', bookingId.toString());
+            router.push(`/payment-success?bookingId=${bookingId}`);
+          } else {
+            router.push('/payment-success');
+          }
         },
         onPending: async (result) => {
           toast("Waiting for your payment!", { icon: "⏳" });
@@ -231,7 +248,7 @@ function OrderDetailContent() {
 
             <label className="font-inter font-semibold">Durasi</label>
             <div className="rounded-md border border-[#D0D5DD] p-2 text-gray-700">
-              {duration} Jam
+              {duration < 0.5 ? "1 Menit (Testing)" : `${duration} Jam`}
             </div>
 
             <label className="font-inter font-semibold">PlayStation</label>
@@ -259,7 +276,7 @@ function OrderDetailContent() {
             </div>
 
             <div className="mb-5 flex w-full justify-between">
-              <p>Rental PS ({duration} Jam)</p>
+              <p>Rental PS ({duration < 0.5 ? "1 Menit (Testing)" : `${duration} Jam`})</p>
               <p>1x</p>
             </div>
 
