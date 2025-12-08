@@ -106,7 +106,7 @@ function PersonalDetailsContent() {
                 value={formData.nama}
                 onChange={handleChange}
                 required
-                placeholder="Lorem ipsum"
+                placeholder=""
                 className="focus-visible:ring-[#4B32CE]"
               />
             </div>
@@ -137,7 +137,7 @@ function PersonalDetailsContent() {
                 id="voucher"
                 value={formData.voucher}
                 onChange={handleChange}
-                placeholder="Lorem Ipsum"
+                placeholder=""
                 className="focus-visible:ring-[#4B32CE]"
               />
             </div>
@@ -155,7 +155,6 @@ function PersonalDetailsContent() {
                   <SelectValue placeholder="Pilih durasi" />
                 </SelectTrigger>
                 <SelectContent className="bg-white">
-                  <SelectItem value="0.017">1 Menit (Testing)</SelectItem>
                   <SelectItem value="1">1 Jam</SelectItem>
                   <SelectItem value="2">2 Jam</SelectItem>
                   <SelectItem value="3">3 Jam</SelectItem>

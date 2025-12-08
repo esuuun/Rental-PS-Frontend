@@ -116,8 +116,9 @@ const FeDwi1 = ({ onLocationSelect }: FeDwi1Props) => {
               <SelectValue placeholder="Pilih tempat" />
             </SelectTrigger>
             <SelectContent className="bg-white">
-              <SelectItem value="Jakarta">Jakarta</SelectItem>
-              <SelectItem value="Kutek">Kutek</SelectItem>
+              <SelectItem value="Tens-Coffee-UPN-VJ">
+                Tens Coffee UPN VJ
+              </SelectItem>
             </SelectContent>
           </Select>
         </div>
