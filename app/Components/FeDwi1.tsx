@@ -126,7 +126,7 @@ const FeDwi1 = ({ onLocationSelect }: FeDwi1Props) => {
         {/* Action Button */}
         <Button
           onClick={handleNext}
-          className="h-auto w-40 rounded-xl bg-[#4B32CE] px-8 py-3 text-base font-bold text-white shadow-md hover:bg-[#3a26a8]"
+          className="h-auto w-40 hover:cursor-pointer rounded-xl bg-[#4B32CE] px-8 py-3 text-base font-bold text-white shadow-md hover:bg-[#3a26a8]"
           disabled={!selectedPlace}
         >
           Lanjut

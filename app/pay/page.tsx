@@ -106,7 +106,7 @@ function PersonalDetailsContent() {
                 value={formData.nama}
                 onChange={handleChange}
                 required
-                placeholder=""
+                placeholder="Nama"
                 className="focus-visible:ring-[#4B32CE]"
               />
             </div>
@@ -137,7 +137,7 @@ function PersonalDetailsContent() {
                 id="voucher"
                 value={formData.voucher}
                 onChange={handleChange}
-                placeholder=""
+                placeholder="Masukkan Kode Voucher Anda"
                 className="focus-visible:ring-[#4B32CE]"
               />
             </div>
@@ -169,14 +169,14 @@ function PersonalDetailsContent() {
                 type="button"
                 variant="outline"
                 onClick={() => router.back()}
-                className="rounded-xl border-[#4B32CE] text-[#4B32CE] hover:bg-[#4B32CE]/10 hover:text-[#4B32CE]"
+                className="rounded-xl border-[#4B32CE] text-[#4B32CE] hover:cursor-pointer hover:bg-[#4B32CE]/10 hover:text-[#4B32CE]"
               >
                 Kembali
               </Button>
               <Button
                 type="submit"
                 disabled={loading}
-                className="rounded-xl bg-[#4B32CE] text-white hover:bg-[#3a26a8] disabled:opacity-50"
+                className="rounded-xl bg-[#4B32CE] text-white hover:cursor-pointer hover:bg-[#3a26a8] disabled:opacity-50"
               >
                 {loading ? "Memproses..." : "Lanjut ke Pembayaran"}
               </Button>

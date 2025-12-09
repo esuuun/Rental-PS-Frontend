@@ -24,7 +24,7 @@ const firaCode = Fira_Code({
 });
 
 export const metadata: Metadata = {
-  title: "Funbox.idn - Portable PS4 & PS5 Gaming Anywhere",
+  title: "funboxidn - Portable PS4 & PS5 Gaming Anywhere",
   description: "Play your favorite games anytime, anywhere without compromising performance or comfort.",
 };
 
