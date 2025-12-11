@@ -1,7 +1,9 @@
 import { useEffect, useState } from "react";
 
 const MIDTRANS_CLIENT_KEY = process.env.NEXT_PUBLIC_MIDTRANS_CLIENT_KEY || "";
-const SNAP_SCRIPT_URL = "https://app.sandbox.midtrans.com/snap/snap.js"; // Change to production URL if needed
+const SNAP_SCRIPT_URL =
+  process.env.NEXT_PUBLIC_SNAP_SCRIPT_URL ||
+  "https://app.sandbox.midtrans.com/snap/snap.js"; // Change to production URL if needed
 
 export const useSnap = () => {
   const [isSnapLoaded, setIsSnapLoaded] = useState(false);
