@@ -4,7 +4,7 @@ import Image from "next/image";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import api from "../../../lib/api";
-import ErrorModal from "../../components/ErrorModal";
+import ErrorModal from "../../Components/ErrorModal";
 
 interface PlayStation {
   id: number;
